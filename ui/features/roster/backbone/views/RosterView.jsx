@@ -40,6 +40,8 @@ export default class RosterView extends Backbone.View {
 
     this.child('roleSelectView', '[data-view=roleSelect]')
 
+    this.child('sortSelectView', '[data-view=sortSelect]')
+
     this.child('resendInvitationsView', '[data-view=resendInvitations]')
 
     this.child('rosterTabsView', '[data-view=rosterTabs]')

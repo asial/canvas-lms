@@ -24,6 +24,7 @@ import RoleSelectView from './backbone/views/RoleSelectView'
 import rosterUsersTemplate from './jst/rosterUsers.handlebars'
 import RosterUserCollection from './backbone/collections/RosterUserCollection'
 import RolesCollection from './backbone/collections/RolesCollection'
+import SortSelectView from './backbone/views/SortSelectView'
 import SectionCollection from '@canvas/sections/backbone/collections/SectionCollection'
 import GroupCategoryCollection from '@canvas/groups/backbone/collections/GroupCategoryCollection'
 import InputFilterView from '@canvas/backbone-input-filter-view'
@@ -74,6 +75,9 @@ const roleSelectView = new RoleSelectView({
   collection: users,
   rolesCollection,
 })
+const sortSelectView = new SortSelectView({
+  collection: users
+})
 const resendInvitationsView = new ResendInvitationsView({
   model: course,
   resendInvitationsUrl: ENV.resend_invitations_url,
@@ -96,6 +100,7 @@ const app = new RosterView({
   rosterTabsView,
   inputFilterView,
   roleSelectView,
+  sortSelectView, // 追加！
   resendInvitationsView,
   collection: users,
   roles: ENV.ALL_ROLES,
