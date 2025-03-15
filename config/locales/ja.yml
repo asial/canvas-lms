@@ -9846,6 +9846,11 @@ ja:
         role_to_search: 制限付きのロール検索
         search_people: メンバーの検索
         title_add_people: メンバーの追加
+        sort_by_name: 名前で並び替え
+        sort_by_email: メールで並び替え
+        sort_by_last_login: 最終アクセス日時で並び替え
+        sort_by_sis_id: SIS ID で並び替え
+        sort_by_integration_id: 統合 ID で並び替え
       invitations_view: 
         accepted_invitation: "%{name}コースに参加するための招待状をすでに受け取っていますが、必要があれば招待状を再送信することができます。"
         admin_invitation_unaccepted: "%{name} はまだコースへの招待を受諾していません。招待が送信された時刻: %{time}"

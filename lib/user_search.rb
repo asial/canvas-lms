@@ -96,7 +96,25 @@ module UserSearch
       order = " DESC NULLS LAST, id DESC" if options[:order] == "desc"
       case options[:sort]
       when "last_login"
-        users_scope.select("users.*").order(Arel.sql("last_login#{order}"))
+        order = " DESC NULLS LAST, id DESC" if options[:order] != "asc"
+        case context
+        when Account
+         users_scope = users_scope
+         .joins("LEFT JOIN #{Pseudonym.quoted_table_name} p ON p.user_id = users.id AND p.workflow_state = 'active'")
+         .select("users.*, MAX(p.last_login_at) AS last_login")
+         .group("users.id") # 必要に応じて group by
+         users_scope.order(Arel.sql("last_login #{order}"))  
+        when Course
+         users_scope = users_scope
+         .joins("LEFT JOIN #{Enrollment.quoted_table_name} e2 ON e2.user_id = users.id AND e2.course_id = #{context.id}")
+         .select("users.*, MAX(e2.last_activity_at) AS last_activity")
+         .group("users.id") # 必要に応じて group by
+         users_scope.order(Arel.sql("last_activity #{order}"))  
+        else # Since last_login cannot be detected, order by username as a failsafe.
+          users_scope.select("users.*").order_by_sortable_name(direction: (options[:order] == "desc") ? :descending : :ascending)
+        end
+#      when "last_login"
+#        users_scope.select("users.*").order(Arel.sql("last_login#{order}"))
       when "username"
         users_scope.select("users.*").order_by_sortable_name(direction: (options[:order] == "desc") ? :descending : :ascending)
       when "email"
