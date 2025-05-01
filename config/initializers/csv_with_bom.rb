@@ -15,3 +15,16 @@ Rails.application.config.to_prepare do
     end
   end
 end
+
+# config/initializers/csv_with_bom.rb
+module CSVWithBOM
+  module GenerateWithBOM
+    def generate(*args, &block)
+      result = super
+      result.prepend("\uFEFF") unless result.start_with?("\uFEFF")
+      result
+    end
+  end
+end
+
+CSV.singleton_class.prepend(CSVWithBOM::GenerateWithBOM)
