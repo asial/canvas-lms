@@ -318,7 +318,7 @@ class Quizzes::QuizStatistics::StudentAnalysis < Quizzes::QuizStatistics::Report
         row << submission.score
         csv << row
       end
-    end.prepend("\uFEFF") # Always prepend UTF-8 BOM to support Excel compatibility
+    end
   end
 
   private
