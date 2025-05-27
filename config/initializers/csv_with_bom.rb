@@ -19,10 +19,19 @@ end
 # config/initializers/csv_with_bom.rb
 module CSVWithBOM
   module GenerateWithBOM
-    def generate(*args, &block)
-      result = super
-      result.prepend("\uFEFF") unless result.start_with?("\uFEFF")
+    def generate(str = nil, **options, &block)
+      result = super(str, **options, &block)
+
+      if result.is_a?(String)
+        result.prepend("\uFEFF") unless result.start_with?("\uFEFF")
+      else
+        Rails.logger.warn("[CSVWithBOM] CSV.generate returned non-String (#{result.class}) — skipping BOM prepend")
+      end
+
       result
+    rescue => e
+      Rails.logger.error("[CSVWithBOM] Failed to generate CSV with BOM: #{e.class} - #{e.message}")
+      raise
     end
   end
 end
