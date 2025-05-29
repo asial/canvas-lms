@@ -182,7 +182,6 @@ namespace :db do
   task configure_default_settings: :load_environment do
     Setting.set("support_multiple_account_types", "false")
     Setting.set("show_opensource_linkback", "true")
-    Setting.set("menu_course_limit","100")
   end
 
   desc "generate data"
