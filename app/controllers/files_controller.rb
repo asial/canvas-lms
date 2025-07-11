@@ -1661,6 +1661,43 @@ class FilesController < ApplicationController
     end
   end
 
+  def verify_authenticity_token
+    if action_name == "show" && theme_js_request?
+      return true
+    end
+
+    super
+  end
+  protected :verify_authenticity_token
+
+  def theme_js_request?
+    return false unless request.get?
+
+    attachment_id = params[:id] || params[:file_id]
+    return false unless attachment_id =~ /\A\d+\z/
+
+    attachment = Attachment.find_by(id: attachment_id)
+    return false unless attachment
+
+    attachment.content_type == "text/javascript" &&
+      attachment.context_type == "Account" &&
+      attachment.namespace.to_s.include?("_localstorage_") &&
+      attachment.filename.to_s.ends_with?(".js") &&
+      internal_origin?
+  end
+  protected :theme_js_request?
+
+  def internal_origin?
+    origin = request.headers["Origin"] || request.referer
+    return false unless origin
+
+    uri = URI.parse(origin) rescue nil
+    return false unless uri
+
+    uri.host == request.host
+  end
+  protected :internal_origin?  
+
   private
 
   def quota_exempt?
@@ -1723,4 +1760,5 @@ class FilesController < ApplicationController
   def strong_attachment_params
     params.require(:attachment).permit(:display_name, :locked, :lock_at, :unlock_at, :uploaded_data, :hidden, :visibility_level)
   end
+
 end
