@@ -210,6 +210,85 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
     assignLocation(props.publishGradesToSis.publishToSisUrl)
   }
 
+  const [statusExporting, setStatusExporting] = useState(false)
+
+  const handleExportStatuses = async () => {
+    if (statusExporting) return
+
+    try {
+      setStatusExporting(true)
+      
+      // ① コース ID を ENV から取得
+      const courseId = window.ENV.course_id || props.gradebookExportUrl.match(/\/courses\/(\d+)/)?.[1];
+      if (!courseId) {
+        $.flashError(I18n.t('Please run this from the Canvas Grades page'))
+        return
+      }
+
+      $.flashMessage(I18n.t('Starting status export...'))
+
+      // ② API 呼び出し（100 件ずつページネート）
+      const base = `/api/v1/courses/${courseId}/students/submissions?student_ids[]=all&include[]=user&include[]=assignment&per_page=100`;
+      const submissions: any[] = [];
+      
+      for (let url = base; url; ) {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error(await res.text());
+        submissions.push(...(await res.json()));
+        const link = res.headers.get('Link') || '';
+        url = (link.match(/<([^>]+)>\s*;\s*rel="next"/) || [])[1];
+      }
+
+      // ③ ステータス関数と CSV 生成
+      const status = (s: any) => {
+        if (s.excused) return I18n.t('Excused')
+        if (s.missing || s.late_policy_status === 'missing') return I18n.t('Missing') //未提出(提出期限切れ)
+        if (s.late || s.late_policy_status === 'late') return I18n.t('Late')
+        if (s.late_policy_status === 'extended') return I18n.t('Extended')
+        if (s.workflow_state === 'graded') return I18n.t('採点済み')
+        if (s.workflow_state === 'submitted') return I18n.t('提出済み')
+        if (s.workflow_state === 'unsubmitted') return I18n.t('未提出')
+        return s.workflow_state;
+      };
+
+      const csvRows = [
+        'student_id,student_name,assignment_id,assignment_name,status,late,missing,grade,submitted_at',
+      ];
+      for (const s of submissions) {
+        csvRows.push(
+          [
+            s.user_id,
+            `"${s.user?.name ?? ''}"`,
+            s.assignment_id,
+            `"${s.assignment?.name ?? ''}"`,
+            status(s),
+            s.late,
+            s.missing,
+            s.grade ?? '',
+            s.submitted_at ?? '',
+          ].join(','),
+        );
+      }
+
+      // ④ ダウンロード
+      const BOM = '\uFEFF';
+      const csvContent = BOM + csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(blob),
+        download: `canvas_status_${courseId}.csv`,
+      });
+      a.click();
+
+      $.flashMessage(I18n.t('Status export completed: %{count} submissions', {count: submissions.length}))
+    } catch (error: any) {
+      console.error('Export error:', error)
+      $.flashError(I18n.t('Status export failed: %{error}', {error: error.message}))
+    } finally {
+      setStatusExporting(false)
+    }
+  }
+
   const disableImports = () => {
     return !(props.gradebookIsEditable && props.contextAllowsGradebookUploads)
   }
@@ -423,6 +502,17 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
         >
           <span data-menu-id="export-all">
             {exportInProgress ? I18n.t('Export in progress') : I18n.t('Export Entire Gradebook')}
+          </span>
+        </MenuItem>
+
+        <MenuItem
+          disabled={statusExporting}
+          onSelect={() => {
+            handleExportStatuses()
+          }}
+        >
+          <span data-menu-id="export-statuses">
+            {statusExporting ? I18n.t('Exporting...') : I18n.t('評定ステータスをエクスポート')}
           </span>
         </MenuItem>
 
