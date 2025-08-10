@@ -214,76 +214,129 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
 
   const handleExportStatuses = async () => {
     if (statusExporting) return
+    setStatusExporting(true)
 
     try {
-      setStatusExporting(true)
-      
-      // ① コース ID を ENV から取得
-      const courseId = window.ENV.course_id || props.gradebookExportUrl.match(/\/courses\/(\d+)/)?.[1];
-      if (!courseId) {
-        $.flashError(I18n.t('Please run this from the Canvas Grades page'))
-        return
+      // ── 0) 小さなヘルパ（最小限） ───────────────────────────────
+      const getCourseId = (): string | null => {
+        return (window as any).ENV?.course_id
+          || props.gradebookExportUrl.match(/\/courses\/(\d+)/)?.[1]
+          || null
       }
 
-      $.flashMessage(I18n.t('Starting status export...'))
-
-      // ② API 呼び出し（100 件ずつページネート）
-      const base = `/api/v1/courses/${courseId}/students/submissions?student_ids[]=all&include[]=user&include[]=assignment&per_page=100`;
-      const submissions: any[] = [];
-      
-      for (let url = base; url; ) {
-        const res = await fetch(url, { credentials: 'same-origin' });
-        if (!res.ok) throw new Error(await res.text());
-        submissions.push(...(await res.json()));
-        const link = res.headers.get('Link') || '';
-        url = (link.match(/<([^>]+)>\s*;\s*rel="next"/) || [])[1];
-      }
-
-      // ③ ステータス関数と CSV 生成
-      const status = (s: any) => {
+      const getStatusLabel = (s: any): string => {
         if (s.excused) return I18n.t('Excused')
-        if (s.missing || s.late_policy_status === 'missing') return I18n.t('Missing') //未提出(提出期限切れ)
+        if (s.missing || s.late_policy_status === 'missing') return I18n.t('Missing')
         if (s.late || s.late_policy_status === 'late') return I18n.t('Late')
         if (s.late_policy_status === 'extended') return I18n.t('Extended')
         if (s.workflow_state === 'graded') return I18n.t('採点済み')
         if (s.workflow_state === 'submitted') return I18n.t('提出済み')
         if (s.workflow_state === 'unsubmitted') return I18n.t('未提出')
-        return s.workflow_state;
-      };
-
-      const csvRows = [
-        'student_id,student_name,assignment_id,assignment_name,status,late,missing,grade,submitted_at',
-      ];
-      for (const s of submissions) {
-        csvRows.push(
-          [
-            s.user_id,
-            `"${s.user?.name ?? ''}"`,
-            s.assignment_id,
-            `"${s.assignment?.name ?? ''}"`,
-            status(s),
-            s.late,
-            s.missing,
-            s.grade ?? '',
-            s.submitted_at ?? '',
-          ].join(','),
-        );
+        return String(s.workflow_state ?? '')
       }
 
-      // ④ ダウンロード
-      const BOM = '\uFEFF';
-      const csvContent = BOM + csvRows.join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-      const a = Object.assign(document.createElement('a'), {
-        href: URL.createObjectURL(blob),
-        download: `canvas_status_${courseId}.csv`,
-      });
-      a.click();
+      const sanitizeForExcel = (v: unknown) => {
+        const s = v == null ? '' : String(v)
+        return /^[=+\-@]/.test(s) ? `'${s}` : s
+      }
+      const csvEscape = (v: unknown) => {
+        const s = sanitizeForExcel(v)
+        return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+      }
 
-      $.flashMessage(I18n.t('Status export completed: %{count} submissions', {count: submissions.length}))
+      // ── 1) コースIDの決定 ───────────────────────────────────────
+      const courseId = getCourseId()
+      if (!courseId) {
+        $.flashError(I18n.t('Please run this from the Canvas Grades page'))
+        return
+      }
+      $.flashMessage(I18n.t('Starting status export...'))
+
+      // ── 2) submissions を全部取る（ページネーション対応） ────────
+      const base = `/api/v1/courses/${courseId}/students/submissions?student_ids[]=all&include[]=user&include[]=assignment&per_page=100`
+      const submissions: any[] = []
+      for (let url: string | undefined = base; url; ) {
+        const res = await fetch(url, { credentials: 'same-origin' })
+        if (!res.ok) throw new Error(await res.text())
+        submissions.push(...(await res.json()))
+        const link = res.headers.get('Link') || ''
+        url = (link.match(/<([^>]+)>\s*;\s*rel="next"/) || [])[1]
+      }
+
+      // ── 3) 縦 → 横（ピボットの材料を作る） ──────────────────────
+      type AssignInfo = { id: number; name: string; position?: number }
+      const assignmentMap = new Map<number, AssignInfo>() // 列（課題）の全集合
+      const students = new Map<number, { name: string; cells: Map<number, string> }>() // 行データ
+
+      for (const s of submissions) {
+        // 列集合（課題）
+        const aId = Number(s.assignment_id)
+        const a = s.assignment || {}
+        if (aId && !assignmentMap.has(aId)) {
+          assignmentMap.set(aId, { id: aId, name: a.name ?? String(aId), position: a.position })
+        }
+
+        // 行集合（学生）
+        const uid = Number(s.user_id)
+        const uname = s.user?.name ?? ''
+        if (!students.has(uid)) {
+          students.set(uid, { name: uname, cells: new Map() })
+        }
+        students.get(uid)!.cells.set(aId, getStatusLabel(s)) // ここを "status (grade)" にしてもOK
+      }
+
+      // 列の並び（成績表の見た目に近い：position → id）
+      const assignments = Array.from(assignmentMap.values()).sort((x, y) => {
+        const px = x.position ?? Number.MAX_SAFE_INTEGER
+        const py = y.position ?? Number.MAX_SAFE_INTEGER
+        return px === py ? x.id - y.id : px - py
+      })
+
+      // ── 4) CSV を組み立てる ────────────────────────────────────
+      // 同名課題の衝突回避（"課題名 [id]"）
+      const nameCount = new Map<string, number>()
+      assignments.forEach(a => nameCount.set(a.name, (nameCount.get(a.name) || 0) + 1))
+      const assignmentHeaderNames = assignments.map(a =>
+        (nameCount.get(a.name) || 0) > 1 ? `${a.name} [${a.id}]` : a.name
+      )
+
+      // ヘッダ
+      const lines: string[] = []
+      const headers = ['student_id', 'student_name', ...assignmentHeaderNames]
+      lines.push(headers.map(csvEscape).join(','))
+
+      // 学生の並び：名前（日本語ロケール、数値考慮）→ ID
+      const studentRows = Array.from(students.entries()).sort(([idA, A], [idB, B]) => {
+        const cmp = (A.name ?? '').localeCompare(B.name ?? '', 'ja', { numeric: true, sensitivity: 'base' })
+        return cmp !== 0 ? cmp : idA - idB
+      })
+
+      // 本文
+      for (const [uid, info] of studentRows) {
+        const row = [
+          uid,
+          info.name,
+          ...assignments.map(a => info.cells.get(a.id) ?? '') // 空欄は未割当の可能性を残す
+        ]
+        lines.push(row.map(csvEscape).join(','))
+      }
+
+      // ダウンロード（BOM + CRLF）
+      const BOM = '\uFEFF'
+      const csvContent = BOM + lines.join('\r\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = Object.assign(document.createElement('a'), {
+        href: url,
+        download: `canvas_status_pivot_${courseId}.csv`,
+      })
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 0)
+
+      $.flashMessage(I18n.t('Status export completed: %{count} submissions', { count: submissions.length }))
     } catch (error: any) {
       console.error('Export error:', error)
-      $.flashError(I18n.t('Status export failed: %{error}', {error: error.message}))
+      $.flashError(I18n.t('Status export failed: %{error}', { error: error.message }))
     } finally {
       setStatusExporting(false)
     }
