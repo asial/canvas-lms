@@ -210,23 +210,26 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
     assignLocation(props.publishGradesToSis.publishToSisUrl)
   }
 
+  //#region [ASIAL CUSTOM] Canvas Status Export
   const [statusExporting, setStatusExporting] = useState(false)
+  const runningRef = useRef(false)
 
   const handleExportStatuses = async () => {
-    if (statusExporting) return
+    // ── (1) 二重実行ガード（useRefロック） ───────────────────────────
+    if (runningRef.current) return
+    runningRef.current = true
     setStatusExporting(true)
 
-    try {
-      // ── 0) 小さなヘルパ（最小限） ───────────────────────────────
+    try { // ── ヘルパー ───────────────────────────────
       const getCourseId = (): string | null => {
-        return (window as any).ENV?.course_id
-          || props.gradebookExportUrl.match(/\/courses\/(\d+)/)?.[1]
-          || null
+        const fromEnv = (window as any).ENV?.course_id
+        const fromUrl = props?.gradebookExportUrl?.match(/\/courses\/(\d+)/)?.[1]
+        return fromEnv || fromUrl || null
       }
 
       const getStatusLabel = (s: any): string => {
         if (s.excused) return I18n.t('Excused')
-        if (s.missing || s.late_policy_status === 'missing') return I18n.t('Missing')
+        if (s.missing || s.late_policy_status === 'missing') return I18n.t('Missing') //未提出(提出期限切れ)
         if (s.late || s.late_policy_status === 'late') return I18n.t('Late')
         if (s.late_policy_status === 'extended') return I18n.t('Extended')
         if (s.workflow_state === 'graded') return I18n.t('採点済み')
@@ -242,6 +245,15 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
       const csvEscape = (v: unknown) => {
         const s = sanitizeForExcel(v)
         return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+      }
+      // 数値文字列の比較
+      const compareNumericStrings = (a: string, b: string) => {
+        const ax = a.replace(/^0+/, '')
+        const bx = b.replace(/^0+/, '')
+        if (ax.length !== bx.length) return ax.length - bx.length
+        if (ax < bx) return -1
+        if (ax > bx) return 1
+        return 0
       }
 
       // ── 1) コースIDの決定 ───────────────────────────────────────
@@ -264,32 +276,36 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
       }
 
       // ── 3) 縦 → 横（ピボットの材料を作る） ──────────────────────
-      type AssignInfo = { id: number; name: string; position?: number }
-      const assignmentMap = new Map<number, AssignInfo>() // 列（課題）の全集合
-      const students = new Map<number, { name: string; cells: Map<number, string> }>() // 行データ
+      type AssignInfo = { id: string; name: string; position?: number } // 課題情報
+      const assignmentMap = new Map<string, AssignInfo>() // 列（課題）の全集合
+      const students = new Map<string, { name: string; cells: Map<string, string> }>() // 行（学生）の全集合
 
       for (const s of submissions) {
         // 列集合（課題）
-        const aId = Number(s.assignment_id)
+        const aId = String(s.assignment_id)
         const a = s.assignment || {}
         if (aId && !assignmentMap.has(aId)) {
-          assignmentMap.set(aId, { id: aId, name: a.name ?? String(aId), position: a.position })
+          assignmentMap.set(aId, {
+            id: aId,
+            name: a.name ?? String(aId),
+            position: typeof a.position === 'number' ? a.position : undefined,
+          })
         }
 
         // 行集合（学生）
-        const uid = Number(s.user_id)
+        const uid = String(s.user_id)
         const uname = s.user?.name ?? ''
         if (!students.has(uid)) {
           students.set(uid, { name: uname, cells: new Map() })
         }
-        students.get(uid)!.cells.set(aId, getStatusLabel(s)) // ここを "status (grade)" にしてもOK
+        students.get(uid)!.cells.set(aId, getStatusLabel(s))
       }
 
-      // 列の並び（成績表の見た目に近い：position → id）
+      // 列の並び
       const assignments = Array.from(assignmentMap.values()).sort((x, y) => {
         const px = x.position ?? Number.MAX_SAFE_INTEGER
         const py = y.position ?? Number.MAX_SAFE_INTEGER
-        return px === py ? x.id - y.id : px - py
+        return px === py ? compareNumericStrings(x.id, y.id) : px - py
       })
 
       // ── 4) CSV を組み立てる ────────────────────────────────────
@@ -305,10 +321,10 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
       const headers = ['student_id', 'student_name', ...assignmentHeaderNames]
       lines.push(headers.map(csvEscape).join(','))
 
-      // 学生の並び：名前（日本語ロケール、数値考慮）→ ID
+      // 学生の並び ID（数値文字列比較）
       const studentRows = Array.from(students.entries()).sort(([idA, A], [idB, B]) => {
         const cmp = (A.name ?? '').localeCompare(B.name ?? '', 'ja', { numeric: true, sensitivity: 'base' })
-        return cmp !== 0 ? cmp : idA - idB
+        return cmp !== 0 ? cmp : compareNumericStrings(idA, idB)
       })
 
       // 本文
@@ -321,7 +337,7 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
         lines.push(row.map(csvEscape).join(','))
       }
 
-      // ダウンロード（BOM + CRLF）
+      // ── (5) ダウンロード（BOM + CRLF） ──
       const BOM = '\uFEFF'
       const csvContent = BOM + lines.join('\r\n')
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' })
@@ -330,7 +346,9 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
         href: url,
         download: `canvas_status_pivot_${courseId}.csv`,
       })
+      document.body.appendChild(a)
       a.click()
+      a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 0)
 
       $.flashMessage(I18n.t('Status export completed: %{count} submissions', { count: submissions.length }))
@@ -338,9 +356,11 @@ export default function EnhancedActionMenu(props: EnhancedActionMenuProps) {
       console.error('Export error:', error)
       $.flashError(I18n.t('Status export failed: %{error}', { error: error.message }))
     } finally {
+      runningRef.current = false // ロック解除
       setStatusExporting(false)
     }
   }
+  //#endregion
 
   const disableImports = () => {
     return !(props.gradebookIsEditable && props.contextAllowsGradebookUploads)
