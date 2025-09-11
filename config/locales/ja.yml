@@ -213,7 +213,7 @@ ja:
   _section_not_synced_yet_cd07d0dd: "-- セクションはまだ同期されていません"
   _start_from_a_template__a03ea3b3: "-- テンプレートから開始 --"
   a_and_b_cannot_be_used_together_77ee6a2a: "{a} と {b} を同時に使用することはできません"
-  a_calculation_value_is_not_used_with_this_calculat_b1e854b4: この計算メソッドで計算値が使用されていません
+  a_calculation_value_is_not_used_with_this_calculat_b1e854b4: この計算方法で計算値が使用されていません
   a_canvas_security_token_was_just_deleted_for_your__94c7ab7c: あなたまたはアカウント管理者の操作により、あなたのアカウント用のCanvasセキュリティトークンが削除されました。残りのトークンは、すべてここで表示および操作できます。
   a_canvas_security_token_was_just_generated_for_you_b03be18b: あなたのアカウント用にCanvasセキュリティトークンが、誰か他のひとによって生成されました。トークンを使用する前に、ここでトークンを有効にする必要があります：
   a_canvas_security_token_was_just_generated_for_you_ef4021aa: あなたのアカウント用にCanvasセキュリティトークンが、誰か他のひとによって生成されました。ユーザートークンをリクエストした場合、それ以上のアクションは不要です。トークンを使用する前に、ここでトークンを有効にする必要があります：
@@ -2244,8 +2244,8 @@ ja:
   accounts_lti_546d15c7: "アカウント (LTI)"
   accounts_tree_navigate_the_accounts_tree_hierarchi_8afea172: アカウントツリー：アカウントツリーを階層的に移動して、アカウントカレンダーの表示・非表示を切り替えられます。
   achieve_mastery_count_times_8c9bbcec: 
-    one: "熟達達成 %{count} 回"
-    other: "熟達達成 %{count} 回"
+    one: "達成基準 %{count} 回"
+    other: "達成基準 %{count} 回"
   act_as_is_essentially_logging_in_as_this_user_with_6244031c: "「～として」は、基本的にこのユーザーとしてパスワードなしでログインしています。あたかもこのユーザーであるかのようにアクションを取ることができ、また、他のユーザーの観点からだと、あたかもこのユーザーがそれを実行したかのように見ることができます。ただし、監査ログには、このユーザーの代わりにアクションを実行したのは、あなた だったと記録されます。"
   act_as_is_essentially_logging_in_as_this_user_with_7e7a7009: 「～として」は、基本的にこのユーザーとしてパスワードなしでログインしています。あたかもこのユーザーであるかのようにアクションを取ることができ、また、他のユーザーの観点からだと、あたかもこのユーザーがそれを実行したかのように見ることができます。
   act_as_name_16d15bfa: "～として%{name}"
@@ -3639,8 +3639,8 @@ ja:
   allows_users_to_see_quantitative_numeric_grading_d_c96924f0: 定量的な（数値）評定データを閲覧できるようにします。この権限を無効にすると、教員の課題作成オプションが制限されます。ユーザーは、文字による評定とコメントを含む質的データのみを見ることができます。
   allows_users_to_use_average_as_a_calculation_metho_874f4b25: 与えられた結果の計算方法として平均を使用できるようにする。
   allows_users_to_use_average_as_a_calulcation_metho_e5031470: 計算方法として平均値を使用することができます。
-  allows_users_to_use_new_decaying_average_as_a_calc_9c285038: 与えられた結果の計算方法として、新しい減衰平均を使用できるようにする。
-  allows_users_to_use_new_decaying_average_as_a_calu_fe640f6d: 与えられた成果の計算方法として、新しい減衰平均を使用することができます。
+  allows_users_to_use_new_decaying_average_as_a_calc_9c285038: 与えられた結果の計算方法として、新しい加重平均を使用できるようにする。
+  allows_users_to_use_new_decaying_average_as_a_calu_fe640f6d: 与えられた成果の計算方法として、新しい加重平均を使用することができます。
   allows_users_with_international_phone_numbers_to_r_f90f8522: ユーザーに、Canvasからの国際電話番号からテキストメッセージを受信することを許可します
   alphabetically_60ab47e4: アルファベット順
   already_belongs_to_an_assignment_override_99fc6f36: すでに課題上書きに属しています
@@ -5632,7 +5632,7 @@ ja:
   avatar_image_url_18d5047d: アバター画像URL
   avatar_state_3f408285: アバター状態
   average_49c63f9b: 平均
-  average_is_not_a_good_fit_for_most_outcomes_based__f351ed94: 受講者がアウトカムを熟達するのに時間がかかることがあり、初期の成績不振が平均値を下げることがあるため、平均値はほとんどのアウトカムベースまたは熟達ベースの学習のユースケースに適していません。
+  average_is_not_a_good_fit_for_most_outcomes_based__f351ed94: 受講者がアウトカムを達成するのに時間がかかることがあり、初期の成績不振が平均値を下げることがあるため、平均値はほとんどのアウトカムベースまたは達成ベースの学習のユースケースに適していません。
   average_score_15cd7c3c: 平均スコア
   avg_alignments_per_artifact_5573d99c: 平均アーティファクトごとのアライメント
   avg_alignments_per_outcome_4daf75cd: 平均アウトカムごとのアライメント
@@ -6072,13 +6072,13 @@ ja:
   cache_cleared_successfully_9ab84d5a: キャッシュの消去に成功しました
   cache_site_admin_access_tokens_c2cdf974: キャッシュサイト管理者アクセストークン
   cached_quiz_lti_ac36fa78: キャッシュされたクイズLTI
-  calc_int_other_int_decaying_average_21de419d: "%{calc_int}/%{other_int}減衰平均"
+  calc_int_other_int_decaying_average_21de419d: "%{calc_int}/%{other_int}加重平均"
   calc_int_other_int_weighted_average_af5121da: "%{calc_int}/%{other_int}比重平均"
   calculated_by_4ac40468: "計算者： "
   calculated_by_baa3c8f3: 計算者：
   calculation_d82f6181: 計算
-  calculation_int_is_not_a_valid_value_for_this_calc_1de6e060: "'%{calculation_int}' は、この計算メソッドでは有効な値ではありません。値は、'%{valid_calculation_ints_min}' ～ '%{valid_calculation_ints_max}' の範囲であることが必要です"
-  calculation_method_fe281f9: 計算メソッド
+  calculation_int_is_not_a_valid_value_for_this_calc_1de6e060: "'%{calculation_int}' は、この計算方法では有効な値ではありません。値は、'%{valid_calculation_ints_min}' ～ '%{valid_calculation_ints_max}' の範囲であることが必要です"
+  calculation_method_fe281f9: 計算方法
   calculation_method_must_be_one_of_the_following_ca_d8ae5dac: "calculation_method は、次のいずれかであることが必要です: %{calc_methods}"
   calculations_fd087607: 計算
   calculator: 
@@ -6881,7 +6881,7 @@ ja:
   cell_number_69a7c309: 携帯電話番号
   cell_number_is_invalid_bd6faee0: 電話番号が無効です!
   cell_number_is_required_2edcee60: 電話番号は必須項目です
-  central_value_in_a_set_of_results_calculated_by_di_19a8c48a: 結果の集合における中心値。全項目の得点の合計を得点数で割って算出。
+  central_value_in_a_set_of_results_calculated_by_di_19a8c48a: 全結果の平均値。全項目の得点の合計を得点数で割って算出。
   certificate_fingerprint_b376df90: 証明書の指紋
   certificate_is_expired_or_not_yet_valid_4a3bb8f1: 証明書の有効期限が切れているか、まだ有効ではありません
   certificate_is_not_a_ca_9ec5d574: 証明書がCAでない
@@ -10842,7 +10842,7 @@ ja:
   deactivate_user_86c09036: ユーザーを無効にする
   debugging_f98fcd74: デバッグ
   debugging_info_advanced_a9e1cc08: "デバッグ情報 (詳細)..."
-  decaying_average_8bf6a0dd: 低下平均
+  decaying_average_8bf6a0dd: 加重平均
   decaying_average_recentint_remainderint_ab0636cc: "減衰する平均値 - %{recentInt}%/%{remainderInt}%"
   december_acc47508: 12月
   decorative_image_3c28aa7d: 装飾的なイメージ
@@ -12102,7 +12102,7 @@ ja:
   edit_assignment_name_8a7af80c: 課題名を編集
   edit_assignment_name_a8f7fae1: "%{name}課題を編集"
   edit_assignment_name_f5b142d1: "課題%{name}を編集する"
-  edit_assignment_name_mastery_paths_40b50541: "課題%{name}マスタリーパスを編集"
+  edit_assignment_name_mastery_paths_40b50541: "課題%{name}達成度パスを編集"
   edit_assignments_2_teacher_error_page_5c3274dc: "課題の編集2 教師エラーページ"
   edit_assignments_2_teacher_initial_query_error_b99135a5: "課題の編集2 教員の初期クエリエラー"
   edit_bank_92eb8e14: "編集%{bank}"
@@ -12150,9 +12150,9 @@ ja:
   edit_label_769ed6c5: "編集%{label}"
   edit_launch_settings_2b8cd8cc: 起動設定を編集
   edit_lti_16f9e6ea: LTI　を編集
-  edit_mastery_paths_for_name_c9fc59f9: "～のマスタリーパスを編集%{name}"
-  edit_mastery_paths_for_title_3c0a15e1: "～のマスタリーパスを編集%{title}"
-  edit_mastery_paths_for_title_label_41d81451: "～のマスタリーパスを編集%{title_label}"
+  edit_mastery_paths_for_name_c9fc59f9: "～の達成度パスを編集%{name}"
+  edit_mastery_paths_for_title_3c0a15e1: "～の達成度パスを編集%{title}"
+  edit_mastery_paths_for_title_label_41d81451: "～の達成度パスを編集%{title_label}"
   edit_module_item_83258f6d: モジュール/アイテムを編集
   edit_module_settings_2bf11f7f: モジュール設定の編集
   edit_name_cbdef0c2: "%{name} の編集"
@@ -13050,7 +13050,7 @@ ja:
   error_fetching_user_details_7c85d23: ユーザーの詳細取得中のエラー
   error_importing_outcomes_59a4fe81: アウトカム物をインポート中にエラー。
   error_importing_rubric_d0f55d79: ルーブリックのインポートエラー
-  error_in_mastery_paths_range_index_7d17ddac: "%{error} マスタリーパスの範囲内%{index}"
+  error_in_mastery_paths_range_index_7d17ddac: "%{error} 達成度パスの範囲内%{index}"
   error_loading_comment_library_db6c9045: コメントライブラリの読み込み中にエラーが発生しました
   error_loading_course_data_f056172b: コースデータの読み込み中にエラー
   error_loading_courses_27d6cd3f: コースの読み込み中にエラー
@@ -16865,7 +16865,7 @@ ja:
   in_less_than_a_minute_c8595a28: 1分未満で
   in_listheading_dd5acd48: " %{listHeading}内"
   in_order_to_complete_the_process_you_will_be_redir_83376e10: プロセスを完了するために、あなたの子供の認証情報でログインする必要があるログインページに、リダイレクトされます。
-  in_order_to_import_a_large_quantity_of_outcomes_at_c0d587e3: 一度に大量のアウトカムをインポートする、または既存のアウトカムを更新するには、*CSV形式に従ってください*。
+  in_order_to_import_a_large_quantity_of_outcomes_at_c0d587e3: 多数のアウトカムを一括でインポートする場合や、既存のアウトカムを更新する場合は、*CSV 形式に従ってください*。
   in_product_training_walkthrough_and_tourpoints_for_2e185119: 講師のための製品内でのトレーニングウォークスルーとツアーポイントです
   in_product_training_walkthrough_and_tourpoints_for_35aebb17: 管理者、教員、受講者向けの製品内トレーニングのウォークスルー（案内）とツアーポイント
   in_progress_13b9e26f: 進行中
@@ -17661,7 +17661,7 @@ ja:
   last_export_899a04c5: 最後のエクスポート：
   last_failed_at_b714ff2e: 最後のエラー場所
   last_first_name_95a078f5: 氏名
-  last_item_79583712: "最終項目: "
+  last_item_79583712: "最後の項目: "
   last_length_graded_items_6db7374e: "最終 %{length} 採点アイテム"
   last_logged_out_7255dc33: 最終ログアウト日時
   last_login_54565109: 前回のログイン
@@ -18663,7 +18663,7 @@ ja:
   mastery_paths_breakdown_6e0b5fce: 熟達の過程の内訳
   mastery_paths_cc4096c2: 熟達の過程
   mastery_paths_editing_has_been_temporarily_disable_4816f0f: 習熟パスの編集は、メンテナンスのため一時的に無効になっています。
-  mastery_paths_editor_930655bb: マスタリーパスエディタ
+  mastery_paths_editor_930655bb: 達成度パスエディタ
   mastery_paths_selection_has_been_temporarily_disab_c40623b9: 習熟パスの選択は、メンテナンスのため一時的に無効になっています。
   mastery_points_f1672cc: 習得ポイント
   mastery_scale_abbc3557: 習熟度スケール
@@ -18806,7 +18806,7 @@ ja:
   medium_skin_tone_8608d74e: 中くらいの濃さの肌の色
   meet_the_instructure_learning_platform_b1a3ff1b: "Instructure Learning Platformのご紹介："
   meets_expectations_bb179565: 期待値を満たしている
-  meets_mastery_754e1c06: 熟達を満たしている
+  meets_mastery_754e1c06: 達成基準を満たしている
   member_count_members_out_of_maximum_of_max_members_d3e9f575: "最大 %{max_membership} 人中 %{member_count} 人"
   members_af25c21d: メンバー
   members_are_free_to_join_defa5929: メンバーは自由に参加できる
@@ -21150,7 +21150,7 @@ ja:
   more_courses_5ebbe998: その他のコース
   more_details_in_speedgrader_a97fead1: 詳細についてはSpeedGraderを参照してください
   more_details_in_the_speedgrader_8702f408: "SpeedGrader 内の詳細"
-  more_importantly_canvas_allows_you_to_add_outcomes_78822cf: "さらに重要なことに、Canvas では評定表にアウトカムを追加できるため、評定を評価する際に習得を評価することができます。アウトカムを設定したら、[ルーブリックスの管理]をクリックして、アウトカムの採点への使用を開始します。"
+  more_importantly_canvas_allows_you_to_add_outcomes_78822cf: "さらに重要な点として、Canvas では評価用ルーブリックにアウトカムを追加できるため、課題を採点しながら達成度を評価できます。アウトカムの設定が完了したら、［ルーブリック］をクリックして、採点に学習成果の活用を開始してください。"
   more_info_at_course_name_56dc8c10: "詳細は %{course_name} をご覧ください"
   more_info_at_url_41b4764b: "詳細は%{url}でご覧ください"
   more_info_at_web_address_dba7e187: "詳細は%{web_address}まで"
@@ -21182,7 +21182,7 @@ ja:
   most_recent_item_4487f7cc: "最新のアイテム: "
   most_recent_result_counts_as_calculation_int_of_ma_13628bf0: "最近のスコアが熟達スコアの %{calculation_int}%  のウエイトを占め、その他すべてのスコアの平均が %{remainder}%  のウエイトを占めています。スコアが戻ってくる前に、最低2つの結果があるはずです。"
   most_recent_result_counts_as_calculation_int_of_ma_a734a4db: "最近のスコアが熟達スコアの %{calculation_int}% oのウエイトを占め、その他すべてのスコアの平均が %{remainder}% oのウエイトを占めています。結果が一つだけなら、そのシングルスコアは戻って来ます。"
-  most_recent_result_counts_as_calculation_int_of_ma_d2fc1d19: "最も最近の評定は、%{calculation_int} マスタリーの比重、他のすべての評定の平均として計上されます（%{remainder} の比重として）。結果が1つだけの場合、単一のスコアが返されます。"
+  most_recent_result_counts_as_calculation_int_of_ma_d2fc1d19: "最も最近の評定は、%{calculation_int} 達成度の比重、他のすべての評定は平均として計上されます（%{remainder} の比重として）。結果が1つだけの場合、単一のスコアが返されます。"
   most_recent_score_13a87e8c: 最新のスコア
   mov_329e9416: MOV
   move_abf00365: 移動
@@ -21289,8 +21289,8 @@ ja:
   multiple_modules_930713d4: 複数のモジュール
   multiple_users_with_the_same_search_type_were_foun_5573669e: "%{search_type}が同じユーザが複数見つかりました。下記のリストより必要なユーザーを選択してください。"
   must_achieve_mastery_at_least_count_times_scores_a_628db168: 
-    one: "熟達を %{count}達成する必要があります。熟達以上のスコアを平均したものが最終スコアとなります。"
-    other: "熟達を %{count}達成する必要があります。熟達以上のスコアを平均したものが最終スコアとなります。"
+    one: "達成基準を %{count}回達成する必要があります。達成基準以上のスコアを平均したものが最終スコアとなります。"
+    other: "達成基準を %{count}回達成する必要があります。達成基準以上のスコアを平均したものが最終スコアとなります。"
   must_be_255_characters_or_less_e8e7f25e: "255 文字以下にしてください"
   must_be_a_number_0_e6ec3e78: 0より大きい数字でなければなりません
   must_be_a_number_e1dfe68a: 数字でなければなりません
@@ -22798,7 +22798,7 @@ ja:
       instructions: 
         main: 
           manage: 
-            description: "*コースの熟達度を追跡するための成果がここで作成されます。まず、上部のメニュー バーを見てください。[新規] ボタンをクリックして新しい成果を作成するか、または [新しいグループ] ボタンをクリックして新しいグループを作成し、成果の情報を整理します。[検索] ボタンを使用すると、状態または組織によって作成された成果を使用できます。成果を作成および使用するときは、左側のパネルを使用して、成果の間を移動できます。成果をドラッグして異なるレベルにドロップして、構造を作成できます。* *さらに重要なことは、Canvas では、採点の注釈に成果を追加して、課題を採点するときに熟達を評価できることです。成果を設定した後、採点への成果の使用を開始するには、[注釈の管理] をクリックします。*"
+            description: "*コースの熟達度を追跡するための成果がここで作成されます。まず、上部のメニュー バーを見てください。[新規] ボタンをクリックして新しい成果を作成するか、または [新しいグループ] ボタンをクリックして新しいグループを作成し、成果の情報を整理します。[検索] ボタンを使用すると、状態または組織によって作成された成果を使用できます。成果を作成および使用するときは、左側のパネルを使用して、成果の間を移動できます。成果をドラッグして異なるレベルにドロップして、構造を作成できます。* *さらに重要なことは、Canvas では、採点の注釈に成果を追加して、課題を採点するときに達成基準を評価できることです。成果を設定した後、採点への成果の使用を開始するには、[注釈の管理] をクリックします。*"
             title: アウトカムの設定
     mastery_error: "0 以上にする必要があります"
     missing_outcome: その学習アウトカムは見つかりませんでした
@@ -22807,7 +22807,7 @@ ja:
       links: 
         delete_outcome: 削除
         edit_outcome: 編集
-      mastery_at_label: "次のスコア以上の場合に熟達を設定:"
+      mastery_at_label: "次のスコア以上の場合に達成基準を設定:"
       point_mastery: "熟達: %{mastery_points} 点"
       points: 
         rating: "%{points} 点"
@@ -22816,13 +22816,13 @@ ja:
       use_for_scoring: 採点にこの基準を使用
     outcome_criterion: 学習成果の基準
     outcome_form: 
-      calculation_method: 計算メソッド
+      calculation_method: 計算方法
       criterion: 基準の評価
       criterion_dialog: 特定の課題に照らして成果の熟達度のアセスメントを実施する手軽な一手法として、学習成果を課題の注釈に含めることができます。学習成果を定義する際は、課題の注釈を組み立てる際に使用できる基準もあわせて定義してください。注釈列を必要なだけ定義し、この成果の熟達度を定義する際に使用する点数のしきい値を指定します。
       criterion_info_link: クリックして基準の評価について学習する
       description: このアウトカムを説明する
       display_name: "わかりやすい名前 (任意)"
-      mastery: 熟達日時
+      mastery: 達成基準
       points: "%{points_possible} 点"
       title: このアウトカムの名前を指定
       total_points: 合計点
@@ -22895,7 +22895,7 @@ ja:
   outcomes_and_rubrics_account_course_68d0bf1d: 成果とルーブリック（アカウント/コース）
   outcomes_and_rubrics_account_course_f0d23419: 成果とルーブリック（アカウント、コース）
   outcomes_and_rubrics_f893d141: 成果とルーブリック
-  outcomes_are_created_here_to_track_mastery_in_a_co_2f487549: "コースの習得を追跡するため、ここにアウトカムが作成されます。上部にあるメニューバーをチェックアウトして開始します。新しいアウトカムを作成するには、「新しいアウトカム」ボタンをクリックするか、またはアウトカムを振り当てる新しいグループを作成するには「新しいグループ」ボタンをクリックしてください。[Find]（検索）ボタンを使用すると、あなたの州または機関によって作成されたアウトカムを使用することができます。アウトカムを作成して使用する際には、左側のパネルを使用してアウトカムをナビゲートすることができます。アウトカムをさまざまなレベル間でドラッグアンドドロップして構造を作成することができます。"
+  outcomes_are_created_here_to_track_mastery_in_a_co_2f487549: "コースにおける達成度を追跡するためのアウトカムを作成します。まずは上部のメニューバーをご確認ください。新しいアウトカムを作成するには［＋アウトカム］ボタンを、アウトカムを整理するための新しいグループを作成するには［＋グループ］ボタンをクリックします。［検索］ボタンを使うと、所属機関が作成したアウトカムを利用できます。アウトカムを作成・利用していくと、左側のパネルで学習成果をナビゲートできるようになります。異なる階層間でドラッグ＆ドロップして構造を作ることもできます。"
   outcomes_averages_report_34199e77: アウトカム平均レポート
   outcomes_csv_format_9005acfb: アウトカムCSV形式
   outcomes_d1b18d33: アウトカム
@@ -22906,7 +22906,7 @@ ja:
   outcomes_import_completed_baff5cb0: アウトカムのインポートが完了しました
   outcomes_import_failed_77efcdf4: アウトカムのインポートに失敗しました
   outcomes_may_be_aligned_to_rubrics_and_quizzes_24e5c4d7: アウトカムはルーブリックや小テストと連動させることができる
-  outcomes_new_decaying_average_calculation_method_177bc53e: アウトカムの新しい減衰平均計算法
+  outcomes_new_decaying_average_calculation_method_177bc53e: アウトカムの新しい加重平均計算法
   outcomes_report_8887bd49: カスタマーレポート
   outcomes_selected_e9f87772: 選択されたアウトカム
   outcomes_service_alignment_migration_5b4391ad: 移行調整サービスのアウトカム
@@ -26458,7 +26458,7 @@ ja:
   recent_student: 
     last_logged_in: "最終ログイン日時: %{last_login}"
   recent_web_conferences_a7c0ab70: 最近のウェブ会議
-  recentint_remainderint_decaying_average_79bc09fb: "%{recentInt}/%{remainderInt} 減衰平均"
+  recentint_remainderint_decaying_average_79bc09fb: "%{recentInt}/%{remainderInt} 加重平均"
   recentint_remainderint_weighted_average_f73369bc: "%{recentInt}/%{remainderInt}比重平均"
   recently_deleted_courses_title: 最近削除したコース
   recipient_4b8dbbc0: 受信者
@@ -26595,9 +26595,9 @@ ja:
   release_grades_c68fbcc: 評定をリリースする
   release_notes_12ca833c: リリースノート
   release_notes_could_not_be_loaded_b4246d49: リリースノートを読み込めませんでした。
-  released_by_mastery_path_b87fcdf5: マスタリーパスからリリース
-  released_by_mastery_path_cyoe_releasedlabel_14c67a92: "マスタリーパスからリリース%{cyoe.releasedLabel}"
-  released_by_mastery_path_path_b562d741: "マスタリーパスからリリース%{path}"
+  released_by_mastery_path_b87fcdf5: 達成度パスからリリース
+  released_by_mastery_path_cyoe_releasedlabel_14c67a92: "達成度パスからリリース%{cyoe.releasedLabel}"
+  released_by_mastery_path_path_b562d741: "達成度パスからリリース%{path}"
   releasing_grades_31a57dde: 評定のリリース
   relevance_53b86743: 関連性
   relinking_paces_fb1a0047: 再リンキングペース...
@@ -28554,12 +28554,12 @@ ja:
         add_outcome: アウトカムの追加
       labels: 
         criterion_ratings: 基準の評価
-        master_level: "次のスコア以上の場合に熟達を設定:"
+        master_level: "次のスコア以上の場合に達成基準を設定:"
         use_for_scoring: 採点にこの基準を使用
       points: "%{points} 点"
       points_threshold: "しきい値:%{points} 点"
       titles: 
-        mastery_level: パーセントを超えた場合に熟達を設定
+        mastery_level: パーセントを超えた場合に達成基準を設定
         select_and_add_criterion: 基準の選択と追加
     flash_notices: 
       close: 閉じる
@@ -34510,7 +34510,7 @@ ja:
   welcome_to_your_subjects_to_customize_the_list_of__a735c17f: "あなたの科目へようこそ！科目の一覧をカスタマイズするには、[すべての科目]のリンクをクリックして、表示する科目にスターを付けます。"
   welcome_to_your_subjects_to_customize_the_list_of__f6574116: "あなたの科目へようこそ！科目の一覧をカスタマイズするには、[すべての科目]のリンクをクリックして、表示する科目にスターを付けます。"
   welcome_your_students_e1d96088: 受講者を歓迎する
-  well_below_mastery_37664bdc: 熟達を大きく下回る
+  well_below_mastery_37664bdc: 達成基準を大きく下回る
   welsh_42ab94b1: ウェールズ語
   were_errors_27343020: 
     one: エラーでした
