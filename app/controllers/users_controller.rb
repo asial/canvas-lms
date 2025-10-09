@@ -620,6 +620,8 @@ class UsersController < ApplicationController
   ].freeze
 
   def dashboard_cards
+    Rails.logger.info "[dashboard_cards] Called with params: #{params.inspect}"
+
     opts = {}
     opts[:observee_user] = User.find_by(id: params[:observed_user_id].to_i) || @current_user if params.key?(:observed_user_id)
     dashboard_courses = map_courses_for_menu(@current_user.menu_courses(nil, opts), tabs: DASHBOARD_CARD_TABS)
@@ -627,7 +629,215 @@ class UsersController < ApplicationController
     Rails.cache.write(["last_known_dashboard_cards_published_count", @current_user.global_id].cache_key, published.count)
     Rails.cache.write(["last_known_dashboard_cards_unpublished_count", @current_user.global_id].cache_key, unpublished.count)
     Rails.cache.write(["last_known_k5_cards_count", @current_user.global_id].cache_key, dashboard_courses.count { |c| !c[:isHomeroom] })
+
+    # Add activity stream summaries if requested via include[] parameter
+    include_params = Array(params[:include]).map(&:to_s)
+    Rails.logger.info "[dashboard_cards] include params: #{include_params.inspect}"
+    Rails.logger.info "[dashboard_cards] dashboard_courses size: #{dashboard_courses.size}"
+    Rails.logger.info "[dashboard_cards] Should call include_activity_streams? #{include_params.include?('activity_stream')}"
+
+    if include_params.include?('activity_stream')
+      Rails.logger.info "[dashboard_cards] About to call include_activity_streams"
+      include_activity_streams(dashboard_courses)
+      Rails.logger.info "[dashboard_cards] Returned from include_activity_streams"
+    end
+
     render json: dashboard_courses
+  end
+
+  # Efficiently fetch activity stream summaries for all courses in one query
+  # N+1 を避けて一括集計し、各コースに activity_stream を付与
+  # Based on Api::V1::StreamItem#calculate_stream_summary logic
+  def include_activity_streams(dashboard_courses, activity_limit: 50)
+    Rails.logger.info "[include_activity_streams] Called with #{dashboard_courses.size} courses"
+    return if dashboard_courses.empty?
+
+    GuardRail.activate(:secondary) do
+      Rails.logger.info "[include_activity_streams] Inside GuardRail block"
+
+      # Extract course IDs - handle both integer IDs and string IDs
+      course_ids = dashboard_courses.filter_map { |course| extract_course_id_from_dashboard_card(course) }.uniq
+
+      Rails.logger.info "[include_activity_streams] extracted course_ids: #{course_ids.inspect}"
+
+      if course_ids.empty?
+        Rails.logger.warn "[include_activity_streams] course_ids is empty, returning early"
+        return
+      end
+
+      @current_user.shard.activate do
+        Rails.logger.info "[include_activity_streams] Inside shard.activate block"
+
+        # === デバッグ開始 ===
+        # 調査1: ユーザーの全stream_item_instancesを確認
+        all_instances = @current_user.stream_item_instances
+        Rails.logger.info "[DEBUG] Total stream_item_instances: #{all_instances.count}"
+        Rails.logger.info "[DEBUG] Hidden=false: #{all_instances.where(hidden: false).count}"
+        Rails.logger.info "[DEBUG] Context=Course: #{all_instances.where(context_type: 'Course').count}"
+        Rails.logger.info "[DEBUG] Course IDs #{course_ids}: #{all_instances.where(context_type: 'Course', context_id: course_ids).count}"
+
+        # 調査2: 実際のデータサンプル（最初の3件）
+        all_instances.where(context_type: 'Course', context_id: course_ids).limit(3).each_with_index do |sii, i|
+          Rails.logger.info "[DEBUG] Sample #{i+1}: SII.id=#{sii.id}, SII.context=#{sii.context_type}/#{sii.context_id}, SII.hidden=#{sii.hidden}, SI.id=#{sii.stream_item_id}"
+        end
+
+        # 調査3: 複数の方法でクエリを試す
+        # 方法1: テーブル名なし（現在の実装）
+        scope1 = @current_user
+          .stream_item_instances
+          .where(hidden: false)
+          .where(context_type: 'Course', context_id: course_ids)
+          .joins(:stream_item)
+        Rails.logger.info "[DEBUG] Method 1 (no table name) count: #{scope1.count}"
+        Rails.logger.info "[DEBUG] Method 1 SQL: #{scope1.to_sql}"
+
+        # 方法2: stream_item_instances のテーブル名を明示
+        scope2 = @current_user
+          .stream_item_instances
+          .where(hidden: false)
+          .where('stream_item_instances.context_type' => 'Course', 'stream_item_instances.context_id' => course_ids)
+          .joins(:stream_item)
+        Rails.logger.info "[DEBUG] Method 2 (SII table) count: #{scope2.count}"
+
+        # 方法3: stream_items のテーブル名を明示
+        scope3 = @current_user
+          .stream_item_instances
+          .where(hidden: false)
+          .joins(:stream_item)
+          .where('stream_items.context_type' => 'Course', 'stream_items.context_id' => course_ids)
+        Rails.logger.info "[DEBUG] Method 3 (SI table) count: #{scope3.count}"
+
+        # 調査4: contexts オプションを使った場合
+        begin
+          courses = Course.where(id: course_ids).to_a
+          Rails.logger.info "[DEBUG] Found #{courses.size} Course objects: #{courses.map(&:id).inspect}"
+
+          opts = { contexts: courses }
+          scope4 = @current_user.visible_stream_item_instances(opts).joins(:stream_item)
+          Rails.logger.info "[DEBUG] Method 4 (contexts option) count: #{scope4.count}"
+          Rails.logger.info "[DEBUG] Method 4 SQL: #{scope4.to_sql}"
+        rescue => e
+          Rails.logger.error "[DEBUG] Method 4 error: #{e.message}"
+        end
+        # === デバッグ終了 ===
+
+        # 実際に使用するscope（方法3が正解の可能性が高い）
+        base_scope = @current_user
+          .stream_item_instances
+          .where(hidden: false)
+          .joins(:stream_item)
+          .where('stream_items.context_type' => 'Course', 'stream_items.context_id' => course_ids)
+
+        count = base_scope.count
+        Rails.logger.info "[include_activity_streams] base_scope count (final): #{count}"
+
+        # 集計のみ（orderなし）でグルーピング
+        raw_counts = base_scope
+          .except(:order)
+          .group(
+            'stream_items.context_id',
+            'stream_items.asset_type',
+            'stream_items.notification_category',
+            'stream_item_instances.workflow_state'
+          )
+          .count
+        # raw_counts:
+        # { [course_id, asset_type, category, wf_state] => count }
+        Rails.logger.info "[include_activity_streams] raw_counts size: #{raw_counts.size}"
+
+        # デバッグ: raw_countsの最初の5件を表示
+        raw_counts.first(5).each do |key, count|
+          Rails.logger.info "[DEBUG] raw_count: course=#{key[0]}, asset=#{key[1]}, category=#{key[2]}, state=#{key[3]}, count=#{count}"
+        end
+
+        cross_shard_totals, cross_shard_unreads = calculate_cross_shard_counts(base_scope)
+        Rails.logger.info "[include_activity_streams] cross_shard_totals size: #{cross_shard_totals.size}"
+
+        # Handle Announcement vs DiscussionTopic distinction (same as calculate_stream_summary)
+        if raw_counts.keys.any? { |k| k[1] == "DiscussionTopic" }
+          ann_counts = base_scope
+            .where(stream_items: { asset_type: "DiscussionTopic" })
+            .joins("INNER JOIN #{DiscussionTopic.quoted_table_name} ON discussion_topics.id=stream_items.asset_id")
+            .where(discussion_topics: { type: "Announcement" })
+            .except(:order)
+            .group('stream_items.context_id', 'stream_item_instances.workflow_state')
+            .count
+          # ann_counts: { [course_id, wf_state] => count }
+
+          ann_counts.each do |(course_id, wf_state), ann_count|
+            # Add Announcement counts
+            raw_counts[[course_id, "Announcement", nil, wf_state]] = ann_count
+            # Subtract from DiscussionTopic counts
+            dt_key = [course_id, "DiscussionTopic", nil, wf_state]
+            raw_counts[dt_key] = (raw_counts[dt_key] || 0) - ann_count
+          end
+        end
+
+        # 形: { course_id => { [asset_type, category] => { total:, unread: } } }
+        summaries_by_course = Hash.new { |h, k| h[k] = Hash.new { |hh, kk| hh[kk] = { total: 0, unread: 0 } } }
+
+        raw_counts.each do |(course_id, asset_type, category, wf_state), cnt|
+          next if cnt <= 0  # Skip negative counts (from Announcement subtraction)
+
+          key = [asset_type, category]
+          sums = summaries_by_course[course_id][key]
+          sums[:total]  += cnt
+          sums[:unread] += cnt if wf_state == 'unread'
+        end
+
+        cross_shard_totals.each do |course_id, counts|
+          counts.each do |(asset_type, category), cnt|
+            next if cnt <= 0
+
+            sums = summaries_by_course[course_id][[asset_type, category]]
+            sums[:total] += cnt
+          end
+        end
+
+        cross_shard_unreads.each do |course_id, counts|
+          counts.each do |(asset_type, category), cnt|
+            next if cnt <= 0
+
+            sums = summaries_by_course[course_id][[asset_type, category]]
+            sums[:unread] += cnt
+          end
+        end
+
+        # 各コースに activity_stream を付与（未読降順→カテゴリ→型で安定ソート）
+        dashboard_courses.each do |course|
+          cid = extract_course_id_from_dashboard_card(course)
+          course_hash = cid ? summaries_by_course[cid] : {}
+
+          rows = if course_hash.blank?
+                   []
+                 else
+                   course_hash.map do |(asset_type, category), v|
+                     {
+                       type: (asset_type || 'unknown'),
+                       notification_category: category,
+                       count: v[:total],
+                       unread_count: v[:unread]
+                     }
+                   end
+                 end
+
+          rows = rows.sort_by { |s| [-s[:unread_count].to_i, s[:notification_category].to_s, s[:type].to_s] }
+          course[:activity_stream] = rows.first(activity_limit)
+
+          # デバッグ: 各コースのactivity_streamを表示
+          Rails.logger.info "[DEBUG] Course #{course[:id]} activity_stream size: #{course[:activity_stream].size}"
+          if course[:activity_stream].any?
+            Rails.logger.info "[DEBUG] Course #{course[:id]} first item: #{course[:activity_stream].first.inspect}"
+          else
+            Rails.logger.warn "[DEBUG] Course #{course[:id]} has EMPTY activity_stream!"
+          end
+        end
+
+        Rails.logger.info "[include_activity_streams] Successfully added activity_stream to all courses"
+      end
+    end
+
+    Rails.logger.info "[include_activity_streams] Completed successfully"
   end
 
   def cached_upcoming_events(user)
@@ -2981,6 +3191,76 @@ class UsersController < ApplicationController
   end
 
   private
+
+  def extract_course_id_from_dashboard_card(course)
+    id = course[:id]
+    case id
+    when Integer
+      id.positive? ? id : nil
+    when String
+      matched = id.match(/\d+/)
+      value = matched&.to_s&.to_i
+      value && value.positive? ? value : nil
+    else
+      nil
+    end
+  end
+
+  def calculate_cross_shard_counts(base_scope)
+    scope = base_scope.where("stream_item_instances.stream_item_id > ?", Shard::IDS_PER_SHARD)
+    rows = scope.pluck("stream_item_instances.stream_item_id", "stream_item_instances.workflow_state", "stream_items.context_id")
+    return [{}, {}] if rows.empty?
+
+    totals = Hash.new { |h, k| h[k] = Hash.new { |hh, kk| hh[kk] = 0 } }
+    unreads = Hash.new { |h, k| h[k] = Hash.new { |hh, kk| hh[kk] = 0 } }
+
+    rows.group_by { |stream_item_id, _workflow_state, context_id| context_id.to_i }.each do |context_id, grouped_rows|
+      next if context_id.zero?
+
+      item_ids = grouped_rows.map(&:first)
+      counts = StreamItem.where(id: item_ids).except(:order).group(:asset_type, :notification_category).count
+
+      unread_ids = grouped_rows.select { |_, workflow_state, _| workflow_state == "unread" }.map(&:first)
+      unread_counts = if unread_ids.empty?
+                        {}
+                      else
+                        StreamItem.where(id: unread_ids).except(:order).group(:asset_type, :notification_category).count
+                      end
+
+      if counts.keys.any? { |(asset_type, _)| asset_type == "DiscussionTopic" }
+        ann_scope = StreamItem.where(id: item_ids, asset_type: "DiscussionTopic")
+                              .joins(:discussion_topic)
+                              .where(discussion_topics: { type: "Announcement" })
+        ann_total = ann_scope.count
+        if ann_total.positive?
+          counts[["Announcement", nil]] = ann_total
+          counts[["DiscussionTopic", nil]] = counts[["DiscussionTopic", nil]].to_i - ann_total
+
+          if unread_ids.any?
+            ann_unread = ann_scope.where(id: unread_ids).count
+            if ann_unread.positive?
+              unread_counts[["Announcement", nil]] = ann_unread
+              unread_counts[["DiscussionTopic", nil]] = unread_counts[["DiscussionTopic", nil]].to_i - ann_unread
+            end
+          end
+        end
+      end
+
+      counts.each do |(asset_type, category), cnt|
+        next unless cnt.positive?
+
+        totals[context_id][[asset_type, category]] += cnt
+      end
+
+      unread_counts.each do |(asset_type, category), cnt|
+        next unless cnt.positive?
+
+        unreads[context_id][[asset_type, category]] += cnt
+      end
+    end
+
+    [totals, unreads]
+  end
 
   def google_drive_client
     settings = Canvas::Plugin.find(:google_drive).try(:settings) || {}

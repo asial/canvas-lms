@@ -25,6 +25,7 @@ import {showFlashAlert} from '@canvas/alerts/react/FlashAlert'
 import {asJson, checkStatus, getPrefetchedXHR} from '@canvas/util/xhr'
 import {useScope as createI18nScope} from '@canvas/i18n'
 import type {Card} from './types'
+import CourseActivitySummaryStore from './react/CourseActivitySummaryStore'
 
 const I18n = createI18nScope('load_card_dashboard')
 
@@ -66,22 +67,12 @@ export class CardDashboardLoader {
     )
   }
 
-  async loadCardDashboard(
-    renderFn = this.renderIntoDOM,
-    observedUserId: string,
-    preloadedCards?: Card[] | null,
-  ) {
+  async loadCardDashboard(renderFn = this.renderIntoDOM, observedUserId: string) {
     if (observedUserId) {
       this.observedUserId = observedUserId
     }
 
-    if (window?.ENV?.FEATURES?.dashboard_graphql_integration && preloadedCards) {
-      try {
-        renderFn(preloadedCards)
-      } catch (e) {
-        this.showError(e as Error)
-      }
-    } else if (observedUserId && CardDashboardLoader.observedUsersDashboardCards[observedUserId]) {
+    if (observedUserId && CardDashboardLoader.observedUsersDashboardCards[observedUserId]) {
       // @ts-expect-error
       renderFn(CardDashboardLoader.observedUsersDashboardCards[observedUserId], true)
     } else if (this.promiseToGetDashboardCards) {
@@ -102,6 +93,8 @@ export class CardDashboardLoader {
       if (observedUserId) {
         url.searchParams.append('observed_user_id', observedUserId)
       }
+      // Request activity streams to be included in the response to avoid N+1 problem
+      url.searchParams.append('include[]', 'activity_stream')
       const urlString = url.toString()
       this.promiseToGetDashboardCards =
         asJson(getPrefetchedXHR(urlString)) ||
@@ -135,6 +128,22 @@ export class CardDashboardLoader {
       Promise.race([this.promiseToGetDashboardCards, promiseToGetCardsFromSessionStorage])
         .then(dashboardCards => {
           clearTimeout(sessionStorageTimeout)
+
+          // Pre-populate CourseActivitySummaryStore with activity stream data from REST API
+          // The backend now returns activity_stream in the dashboard_cards response when
+          // include[]=activity_stream parameter is used, avoiding N+1 problem
+          if (Array.isArray(dashboardCards) && dashboardCards.length > 0) {
+            const state = CourseActivitySummaryStore.getState()
+            dashboardCards.forEach((card: Card) => {
+              // @ts-expect-error - activity_stream is added by backend when include[] param is used
+              if (card.activity_stream) {
+                // @ts-expect-error
+                state.streams[card.id] = {stream: card.activity_stream}
+              }
+            })
+            CourseActivitySummaryStore.setState(state)
+          }
+
           // calling the renderFn with `false` indicates to consumers that we're still waiting
           // on the follow-up xhr request to complete.
           // @ts-expect-error

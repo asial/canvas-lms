@@ -39,17 +39,14 @@ const CourseActivitySummaryStore: CanvasStore<{
 CourseActivitySummaryStore.getStateForCourse = function (courseId?: string) {
   if (typeof courseId === 'undefined') return CourseActivitySummaryStore.getState()
 
-  const {streams, isFetching} = CourseActivitySummaryStore.getState()
+  const {streams} = CourseActivitySummaryStore.getState()
   if (!(courseId in streams)) {
     streams[courseId] = {}
-
-    if (ENV.FEATURES?.dashboard_graphql_integration && ENV?.current_user_id) {
-      if (!isFetching) {
-        CourseActivitySummaryStore._batchLoadSummaries?.(ENV.current_user_id)
-      }
-    } else {
-      CourseActivitySummaryStore._fetchForCourse?.(courseId)
-    }
+    // Only fetch if stream data is not already populated (avoiding N+1 problem)
+    CourseActivitySummaryStore._fetchForCourse?.(courseId)
+  } else if (!streams[courseId].stream) {
+    // Stream entry exists but has no data yet, fetch it
+    CourseActivitySummaryStore._fetchForCourse?.(courseId)
   }
   return streams[courseId]
 }
