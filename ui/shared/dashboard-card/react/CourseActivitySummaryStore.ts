@@ -26,15 +26,21 @@ type Stream = unknown[]
 
 type Streams = Record<string, {stream?: Stream}>
 
+const initialState = {streams: {} as Streams, baseDelay: 0}
+if (typeof window !== 'undefined') {
+  initialState.baseDelay = Math.random() * 5000
+}
+
 const CourseActivitySummaryStore: CanvasStore<{
   streams: Streams
   isFetching?: boolean
+  baseDelay?: number
 }> & {
   _fetchForCourse?: (courseId: string) => Promise<void>
   getStateForCourse?: (courseId: string) => {streams: Streams} | {stream?: Stream} | undefined
   _batchLoadSummaries?: (userID: string) => void
   _fetchActivityStreamSummaries?: (userID: string) => Promise<void>
-} = createStore({streams: {}})
+} = createStore(initialState)
 
 CourseActivitySummaryStore.getStateForCourse = function (courseId?: string) {
   if (typeof courseId === 'undefined') return CourseActivitySummaryStore.getState()
@@ -55,13 +61,20 @@ CourseActivitySummaryStore.getStateForCourse = function (courseId?: string) {
 }
 
 CourseActivitySummaryStore._fetchForCourse = function (courseId: string) {
-  // @ts-expect-error
-  return asJson(
-    window.fetch(`/api/v1/courses/${courseId}/activity_stream/summary`, defaultFetchOptions()),
-  ).then((stream: Stream) => {
-    const state = CourseActivitySummaryStore.getState()
-    state.streams[courseId] = {stream}
-    CourseActivitySummaryStore.setState(state)
+  const state = CourseActivitySummaryStore.getState()
+  const baseDelay = state.baseDelay || 0
+  const jitter = Math.random() * 500
+  const totalDelay = baseDelay + jitter
+
+  return new Promise(resolve => setTimeout(resolve, totalDelay)).then(() => {
+    // @ts-expect-error
+    return asJson(
+      window.fetch(`/api/v1/courses/${courseId}/activity_stream/summary`, defaultFetchOptions()),
+    ).then((stream: Stream) => {
+      const state = CourseActivitySummaryStore.getState()
+      state.streams[courseId] = {stream}
+      CourseActivitySummaryStore.setState(state)
+    })
   })
 }
 
