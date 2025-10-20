@@ -9,7 +9,7 @@ services:
   mailcatcher:
     image: instructure/mailcatcher
     ports:
-      - "10003:8080"
+      - "127.0.0.1:10003:8080"
     environment:
       VIRTUAL_HOST: $MAIL_HOST
       VIRTUAL_PORT: 8080

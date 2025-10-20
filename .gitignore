@@ -32,7 +32,6 @@
 /coverage-js/
 /db/schema.rb
 /db/*sql
-
 /exports/
 /Gemfile.*.plugins.lock
 /log/*
