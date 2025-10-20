@@ -56,6 +56,8 @@ enhanced_gradebook_filters:
   environments:
     development:
       state: on # enable for local development
+    production:
+      state: on # asial add 2025/07/11
 message_observers_of_students_who:
   state: hidden
   applies_to: SiteAdmin

@@ -2991,7 +2991,7 @@ class User < ActiveRecord::Base
     # this terribleness is so we try to make sure that the newest courses show up in the menu
     courses = courses_with_primary_enrollment(:current_and_invited_courses, enrollment_uuid, opts)
               .sort_by { |c| [c.primary_enrollment_rank, Time.zone.now - (c.primary_enrollment_date || Time.zone.now)] }
-              .first(Setting.get("menu_course_limit", "20").to_i)
+              .first(Setting.get("menu_course_limit", "100").to_i)
               .sort_by { |c| [c.primary_enrollment_rank, Canvas::ICU.collation_key(c.name)] }
     favorites = courses_with_primary_enrollment(:favorite_courses, enrollment_uuid, opts)
                 .select { |c| can_favorite.call(c) }
