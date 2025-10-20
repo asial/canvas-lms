@@ -32,7 +32,6 @@
 /coverage-js/
 /db/schema.rb
 /db/*sql
-docker-compose.override.yml
 /exports/
 /Gemfile.*.plugins.lock
 /log/*
