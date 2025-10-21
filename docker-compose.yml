@@ -46,7 +46,14 @@ services:
 
   redis:
     image: redis:alpine
-    command: redis-server --maxmemory 2g --maxmemory-policy allkeys-lru --tcp-keepalive 30 --maxclients 2000 --timeout 300
+    command: >
+      redis-server
+      --maxmemory 2g
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 30
+      --maxclients 2000
+      --timeout 300
+      --save ""
     networks:
       - canvas-lms-network
     env_file: .env
