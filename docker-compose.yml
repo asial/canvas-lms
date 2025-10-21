@@ -43,13 +43,21 @@ services:
       -c wal_buffers=64MB 
       -c wal_compression=on 
       -c synchronous_commit=local  
+      -c shared_preload_libraries=pg_stat_statements
     networks:
       - canvas-lms-network
     env_file: .env
 
   redis:
     image: redis:alpine
-    command: redis-server --maxmemory 2g --maxmemory-policy allkeys-lru --tcp-keepalive 30 --maxclients 2000 --timeout 300
+    command: >
+      redis-server
+      --maxmemory 2g
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 30
+      --maxclients 2000
+      --timeout 300
+      --save ""
     networks:
       - canvas-lms-network
     env_file: .env
