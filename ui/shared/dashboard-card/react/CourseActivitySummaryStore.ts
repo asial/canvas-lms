@@ -28,7 +28,7 @@ type Streams = Record<string, {stream?: Stream}>
 
 const initialState = {streams: {} as Streams, baseDelay: 0}
 if (typeof window !== 'undefined') {
-  initialState.baseDelay = Math.random() * 5000
+  initialState.baseDelay = Math.random() * 9000
 }
 
 const CourseActivitySummaryStore: CanvasStore<{
