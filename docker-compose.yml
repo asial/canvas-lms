@@ -40,6 +40,7 @@ services:
       -c random_page_cost=1.1
       -c min_wal_size=1GB
       -c max_wal_size=4GB
+      -c shared_preload_libraries=pg_stat_statements
     networks:
       - canvas-lms-network
     env_file: .env
