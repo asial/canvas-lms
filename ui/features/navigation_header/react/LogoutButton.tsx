@@ -20,12 +20,18 @@ import React from 'react'
 import {Button, type ButtonProps} from '@instructure/ui-buttons'
 import {useScope as createI18nScope} from '@canvas/i18n'
 import getCookie from '@instructure/get-cookie'
+import {clearAllDashboardCardCache} from '../../../shared/dashboard-card/dashboardCardCache'
 
 const I18n = createI18nScope('LogoutButton')
 
 export default function LogoutButton(props: ButtonProps) {
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = () => {
+    // Clear dashboard card cache on logout
+    clearAllDashboardCardCache()
+  }
+
   return (
-    <form action="/logout" method="post">
+    <form action="/logout" method="post" onSubmit={handleSubmit}>
       <input name="utf8" value="✓" type="hidden" />
       <input name="_method" value="delete" type="hidden" />
       <input name="authenticity_token" value={getCookie('_csrf_token')} type="hidden" />

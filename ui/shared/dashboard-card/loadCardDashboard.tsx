@@ -23,6 +23,7 @@ import DashboardCard from './react/DashboardCard'
 import axios from '@canvas/axios'
 import {showFlashAlert} from '@canvas/alerts/react/FlashAlert'
 import {asJson, checkStatus, getPrefetchedXHR} from '@canvas/util/xhr'
+import {getCachedCards as getCardsFromCache, setCachedCards} from './dashboardCardCache'
 import {useScope as createI18nScope} from '@canvas/i18n'
 import type {Card} from './types'
 
@@ -95,73 +96,118 @@ export class CardDashboardLoader {
         })
     } else {
       let xhrHasReturned = false
-      let sessionStorageTimeout: number
-      const sessionStorageKey = `dashcards_for_user_${ENV && ENV.current_user_id}`
+      let cacheTimeout: number
+      const observeePart = observedUserId ? `_observee_${observedUserId}` : '_self'
+      const cacheKey = `dashcards_for_user_${ENV && ENV.current_user_id}${observeePart}`
+      const legacyKey = `dashcards_for_user_${ENV && ENV.current_user_id}`
+      const CACHE_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days - long cache for instant display
+      const getCachedCards = () => getCardsFromCache(ENV && ENV.current_user_id, observedUserId, CACHE_TTL)
+
       const urlPrefix = '/api/v1/dashboard/dashboard_cards'
       const url = new URL(urlPrefix, window.location.origin)
       if (observedUserId) {
         url.searchParams.append('observed_user_id', observedUserId)
       }
       const urlString = url.toString()
-      this.promiseToGetDashboardCards =
-        asJson(getPrefetchedXHR(urlString)) ||
-        axios
-          .get(urlString)
-          // @ts-expect-error
-          .then(checkStatus)
-          // @ts-expect-error
-          .then(({data}) => data)
-          .catch(e => {
-            this.showError(e)
-          })
+      const prefetchedXHR = asJson(getPrefetchedXHR(urlString))
+      const cachedData = getCachedCards()
+
+      // If cache exists, show immediately and fetch in background
+      if (cachedData) {
+        // Render cached data immediately (no waiting)
+        renderFn(cachedData, false)
+        xhrHasReturned = false
+
+        // Fetch fresh data in background with longer jitter (3s)
+        // User already sees content, so no UX impact from delay
+        // Spreads load better across 3 seconds instead of 1 second
+        const jitter = Math.random() * 3000
+        this.promiseToGetDashboardCards = new Promise(resolve => {
+          setTimeout(() => {
+            const request = prefetchedXHR || axios.get(urlString).then(checkStatus).then(({data}) => data)
+            resolve(request)
+          }, jitter)
+        }).catch(e => {
+          this.showError(e)
+        })
+      } else if (!prefetchedXHR) {
+        // No cache, no prefetch - use shorter jitter (1s) to balance UX and load distribution
+        // User is waiting for initial display
+        const jitter = Math.random() * 1000
+
+        this.promiseToGetDashboardCards = new Promise(resolve => {
+          setTimeout(() => {
+            resolve(
+              axios
+                .get(urlString)
+                // @ts-expect-error
+                .then(checkStatus)
+                // @ts-expect-error
+                .then(({data}) => data)
+            )
+          }, jitter)
+        }).catch(e => {
+          this.showError(e)
+        })
+      } else {
+        // Use prefetched XHR
+        this.promiseToGetDashboardCards = prefetchedXHR.catch(e => {
+          this.showError(e)
+        })
+      }
       this.promiseToGetDashboardCards
         .then(() => (xhrHasReturned = true))
         .catch(e => {
           this.showError(e)
         })
 
-      // Because we use prefetch_xhr to prefetch this xhr request from our rails erb, there is a
-      // chance that the XHR to get the latest dashcard data has already come back before we get
-      // to this point. So if the XHR is ready, there's no need to render twice, just render
-      // once with the newest data.
-      // Otherwise, render with the cached stuff from session storage now, then render again
-      // when the xhr comes back with the latest data.
-      const promiseToGetCardsFromSessionStorage = new Promise(resolve => {
-        sessionStorageTimeout = setTimeout(() => {
-          const cachedCards = sessionStorage.getItem(sessionStorageKey)
-          if (cachedCards) resolve(JSON.parse(cachedCards))
-        }, 1) as unknown as number
-      })
-      Promise.race([this.promiseToGetDashboardCards, promiseToGetCardsFromSessionStorage])
-        .then(dashboardCards => {
-          clearTimeout(sessionStorageTimeout)
-          // calling the renderFn with `false` indicates to consumers that we're still waiting
-          // on the follow-up xhr request to complete.
-          // @ts-expect-error
-          renderFn(dashboardCards, xhrHasReturned)
-          // calling it with `true` indicates that all outstanding card promises have settled.
-          if (!xhrHasReturned && this.promiseToGetDashboardCards)
+      // If cache was displayed immediately, wait for background fetch to update
+      if (cachedData) {
+        this.promiseToGetDashboardCards
+          .then((cards: Card[]) => {
+            // Update with fresh data from background fetch
             // @ts-expect-error
-            return this.promiseToGetDashboardCards.then((cards: Card[]) => renderFn(cards, true))
+            renderFn(cards, true)
+          })
+          .catch(e => {
+            this.showError(e)
+          })
+      } else {
+        // No cache - use Promise.race to show data as soon as possible
+        // Because we use prefetch_xhr to prefetch this xhr request from our rails erb, there is a
+        // chance that the XHR to get the latest dashcard data has already come back before we get
+        // to this point. So if the XHR is ready, there's no need to render twice, just render
+        // once with the newest data.
+        const promiseToGetCardsFromCache = new Promise(resolve => {
+          cacheTimeout = setTimeout(() => {
+            const cachedCards = getCachedCards()
+            if (cachedCards) resolve(cachedCards)
+          }, 1) as unknown as number
         })
-        .catch(e => {
-          this.showError(e)
-        })
+        Promise.race([this.promiseToGetDashboardCards, promiseToGetCardsFromCache])
+          .then(dashboardCards => {
+            clearTimeout(cacheTimeout)
+            // calling the renderFn with `false` indicates to consumers that we're still waiting
+            // on the follow-up xhr request to complete.
+            // @ts-expect-error
+            renderFn(dashboardCards, xhrHasReturned)
+            // calling it with `true` indicates that all outstanding card promises have settled.
+            if (!xhrHasReturned && this.promiseToGetDashboardCards)
+              // @ts-expect-error
+              return this.promiseToGetDashboardCards.then((cards: Card[]) => renderFn(cards, true))
+          })
+          .catch(e => {
+            this.showError(e)
+          })
+      }
 
-      // Cache the fetched dashcards in sessionStorage so we can render instantly next
+      // Cache the fetched dashcards in localStorage with TTL so we can render instantly next
       // time they come to their dashboard (while still fetching the most current data)
       // Also save the observed user's cards if observing so observer can switch between students
       // without any delay
       this.promiseToGetDashboardCards
         .then((dashboardCards: Card[]) => {
-          try {
-            sessionStorage.setItem(sessionStorageKey, JSON.stringify(dashboardCards))
-          } catch (_e) {
-            // If saving the cards to session storage fails, we can just ignore the exception; the cards
-            // will still be fetched and displayed on the next load. Telling the user probably doesn't
-            // make sense since it doesn't change the way the app works, nor does it make sense to log
-            // the error since it could happen in normal circumstances (like using Safari in private mode).
-          }
+          setCachedCards(ENV && ENV.current_user_id, observedUserId, dashboardCards)
           if (observedUserId) {
             CardDashboardLoader.observedUsersDashboardCards[observedUserId] = dashboardCards
           }

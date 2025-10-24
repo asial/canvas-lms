@@ -26,6 +26,7 @@ import MovementUtils from './MovementUtils'
 import {showNoFavoritesAlert} from './ConfirmUnfavoriteCourseModal'
 import type {Card} from '../types'
 import {clearDashboardCache} from '../dashboardCardQueries'
+import {setCachedCards} from '../dashboardCardCache'
 
 const I18n = createI18nScope('dashcards')
 
@@ -146,6 +147,15 @@ export default class DashboardCardBox extends React.Component<Props, State> {
         }
       },
       () => {
+        // Immediately update localStorage cache so next landing uses latest favorites
+        try {
+          const userId = (window as any)?.ENV?.current_user_id
+          if (userId) {
+            setCachedCards(userId, this.state.observedUserId, newCards)
+          }
+        } catch (_e) {
+          // ignore storage errors (private mode, quota, etc.)
+        }
         if (newCards.length === 0) {
           showNoFavoritesAlert()
         }
