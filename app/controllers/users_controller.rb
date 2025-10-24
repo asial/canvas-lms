@@ -620,9 +620,32 @@ class UsersController < ApplicationController
   ].freeze
 
   def dashboard_cards
-    opts = {}
-    opts[:observee_user] = User.find_by(id: params[:observed_user_id].to_i) || @current_user if params.key?(:observed_user_id)
-    dashboard_courses = map_courses_for_menu(@current_user.menu_courses(nil, opts), tabs: DASHBOARD_CARD_TABS)
+    # セキュリティガード: ユーザーIDが取得できない場合はキャッシュを使わない
+    # (キャッシュキーの衝突による他ユーザーとのデータ共有を防ぐ)
+    if @current_user&.global_id.present?
+      cache_key = [
+        "dashboard_cards_v2",
+        @current_user.global_id,
+        params[:observed_user_id],
+        ApplicationController.region
+      ].cache_key
+
+      dashboard_courses = Rails.cache.fetch(
+        cache_key,
+        expires_in: 1.hour,
+        race_condition_ttl: 10.minutes
+      ) do
+        opts = {}
+        opts[:observee_user] = User.find_by(id: params[:observed_user_id].to_i) || @current_user if params.key?(:observed_user_id)
+        map_courses_for_menu(@current_user.menu_courses(nil, opts), tabs: DASHBOARD_CARD_TABS)
+      end
+    else
+      # global_idがない場合はキャッシュを使わずに直接取得
+      opts = {}
+      opts[:observee_user] = User.find_by(id: params[:observed_user_id].to_i) || @current_user if params.key?(:observed_user_id)
+      dashboard_courses = map_courses_for_menu(@current_user.menu_courses(nil, opts), tabs: DASHBOARD_CARD_TABS)
+    end
+
     published, unpublished = dashboard_courses.partition { |course| course[:published] }
     Rails.cache.write(["last_known_dashboard_cards_published_count", @current_user.global_id].cache_key, published.count)
     Rails.cache.write(["last_known_dashboard_cards_unpublished_count", @current_user.global_id].cache_key, unpublished.count)
