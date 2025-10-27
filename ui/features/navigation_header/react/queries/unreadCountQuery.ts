@@ -38,6 +38,12 @@ export async function getUnreadCount({queryKey, signal}: QueryFunctionContext): 
   if (!unreadCountTypes.includes(unreadCountType))
     throw new Error(`Bad unreadCount type ${unreadCountType}`)
 
+  // Add jitter to spread load using a single random delay (0-3000ms)
+  if (unreadCountType === 'conversations' || unreadCountType === 'release_notes') {
+    const jitter = Math.floor(Math.random() * 5000)
+    await new Promise(resolve => setTimeout(resolve, jitter))
+  }
+
   const path = URL_MAP[unreadCountType]
   // conversations count returns as string 😞    vvvvvvvvvvvvvvv
   const {json} = await doFetchApi<{unread_count: number | string}>({path, fetchOpts})
