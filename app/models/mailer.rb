@@ -27,6 +27,7 @@ class Mailer < ActionMailer::Base
   def create_message(m)
     # notifications have context, bounce replies don't.
     headers("Auto-Submitted" => m.context ? "auto-generated" : "auto-replied")
+    headers("X-Canvas-Notification" => m.notification_name.to_s.parameterize(separator: "_")) if m.notification_name
 
     params = {
       from: from_mailbox(m),
