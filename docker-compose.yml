@@ -10,6 +10,7 @@ services:
       POSTGRES_PASSWORD: $POSTGRES_PASSWORD
     networks:
       - canvas-lms-network
+      - mailnet
     env_file: .env 
 
   jobs:
@@ -68,3 +69,6 @@ services:
 
 networks:
   canvas-lms-network:
+  mailnet:
+    external: true
+    name: mailnet
