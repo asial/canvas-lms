@@ -8,6 +8,7 @@ services:
       - redis
     environment:
       POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      LD_PRELOAD: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
     networks:
       - canvas-lms-network
       - mailnet

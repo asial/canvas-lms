@@ -58,6 +58,7 @@ RUN mkdir -p /etc/apt/keyrings \
        fontforge \
        git \
        build-essential \
+       libjemalloc2 \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /home/docker/.gem/ruby/$RUBY_MAJOR.0
 
