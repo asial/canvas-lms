@@ -1,0 +1,3 @@
+[submodule "QTIMigrationTool"]
+	path = QTIMigrationTool
+	url = https://github.com/instructure/QTIMigrationTool.git
