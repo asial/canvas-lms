@@ -1,0 +1,19 @@
+services:
+  compressor:
+    build:
+      context: ..
+      dockerfile: docker-compose/compressor/Dockerfile
+    volumes:
+      - ../user_data/files:/data/files
+      - ../logs:/logs
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: canvas_production
+      FILES_BASE: /data/files
+      LOG_DIR: /logs
+    networks:
+      - canvas-lms-network
+    profiles:
+      - tools
