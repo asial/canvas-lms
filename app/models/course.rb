@@ -4165,7 +4165,10 @@ class Course < ActiveRecord::Base
   end
 
   def self.preload_menu_data_for(courses, user, preload_favorites: false)
-    ActiveRecord::Associations.preload(courses, :enrollment_term)
+    # :account and :wiki are read per-course by CourseForMenuPresenter
+    # (account.use_classic_font_in_k5?, wiki.front_page for frontPageTitle) and
+    # would otherwise N+1 across every dashboard card / course-menu entry.
+    ActiveRecord::Associations.preload(courses, [:enrollment_term, :account, :wiki])
     # preload favorites and nicknames
     favorite_ids = preload_favorites && user.favorite_context_ids("Course")
     nicknames = user.all_course_nicknames(courses)
