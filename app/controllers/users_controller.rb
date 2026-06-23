@@ -622,7 +622,26 @@ class UsersController < ApplicationController
   def dashboard_cards
     opts = {}
     opts[:observee_user] = User.find_by(id: params[:observed_user_id].to_i) || @current_user if params.key?(:observed_user_id)
-    dashboard_courses = map_courses_for_menu(@current_user.menu_courses(nil, opts), tabs: DASHBOARD_CARD_TABS)
+    # The dashboard polls this endpoint frequently and most hits are 304s, but the
+    # ETag is computed from a freshly built payload, so map_courses_for_menu runs in
+    # full on every revalidation. Cache the built payload per user for a short,
+    # runtime-tunable window so revalidations skip the rebuild. The course set it is
+    # built from is itself already cached for 15 minutes
+    # (User#courses_with_primary_enrollment), so this shorter TTL does not make the
+    # cards staler than they already are. The key carries @current_user.cache_key,
+    # so it also busts when the user record is touched. Set the Setting to 0 to
+    # disable without a deploy.
+    ttl = Setting.get("dashboard_cards_cache_seconds", "120").to_i
+    build_cards = -> { map_courses_for_menu(@current_user.menu_courses(nil, opts), tabs: DASHBOARD_CARD_TABS) }
+    dashboard_courses =
+      if ttl.positive?
+        Rails.cache.fetch(
+          [@current_user, "dashboard_cards_v1", opts[:observee_user]&.global_id, ApplicationController.region].cache_key,
+          expires_in: ttl.seconds
+        ) { build_cards.call }
+      else
+        build_cards.call
+      end
     published, unpublished = dashboard_courses.partition { |course| course[:published] }
     Rails.cache.write(["last_known_dashboard_cards_published_count", @current_user.global_id].cache_key, published.count)
     Rails.cache.write(["last_known_dashboard_cards_unpublished_count", @current_user.global_id].cache_key, unpublished.count)

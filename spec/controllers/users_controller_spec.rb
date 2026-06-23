@@ -27,6 +27,35 @@ describe UsersController do
 
   let(:group_helper) { Factories::GradingPeriodGroupHelper.new }
 
+  describe "GET 'dashboard_cards'" do
+    before :once do
+      course_with_student(active_all: true)
+    end
+
+    before do
+      user_session(@student)
+    end
+
+    it "builds the cards once across repeated requests within the cache window" do
+      enable_cache do
+        expect_any_instance_of(UsersController).to receive(:map_courses_for_menu).once.and_return([])
+        get "dashboard_cards"
+        expect(response).to be_successful
+        get "dashboard_cards"
+        expect(response).to be_successful
+      end
+    end
+
+    it "rebuilds on every request when dashboard_cards_cache_seconds is 0" do
+      enable_cache do
+        Setting.set("dashboard_cards_cache_seconds", "0")
+        expect_any_instance_of(UsersController).to receive(:map_courses_for_menu).twice.and_return([])
+        get "dashboard_cards"
+        get "dashboard_cards"
+      end
+    end
+  end
+
   describe "external_tool" do
     let(:account) { Account.default }
 
