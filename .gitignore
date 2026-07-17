@@ -102,3 +102,13 @@ schema.graphql
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+
+# server-local operational files on production (kept out of the repo)
+/mail-webhook-gateway/
+/libjemalloc.so.2
+/ld.so.preload
+/.env_backup
+/nohup.out
+/docker-compose.yjit-canary.yml
+*.bak-*
+*.bak.*
