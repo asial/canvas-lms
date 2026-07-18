@@ -169,8 +169,13 @@ class Quizzes::QuizzesController < ApplicationController
     end
 
     if @current_user.present?
-      Quizzes::OutstandingQuizSubmissionManager.delay_if_production
-                                               .grade_by_course(@context)
+      # Dedupe via singleton: a burst of students opening the quiz index at class
+      # start would otherwise enqueue one identical grade_by_course delayed job
+      # (inst-jobs) per request. The job grades the whole course, so a single
+      # pending job per course is sufficient.
+      Quizzes::OutstandingQuizSubmissionManager.delay_if_production(
+        singleton: "quizzes_outstanding_grade:#{@context.global_id}"
+      ).grade_by_course(@context)
     end
 
     log_asset_access(["quizzes", @context], "quizzes", "other")
