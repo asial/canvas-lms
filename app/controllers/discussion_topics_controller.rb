@@ -476,19 +476,27 @@ class DiscussionTopicsController < ApplicationController
           mc_status = setup_master_course_restrictions(@topics, @context)
         end
         root_topic_fields = [:delayed_post_at, :lock_at]
-        render json: discussion_topics_api_json(@topics,
-                                                @context,
-                                                @current_user,
-                                                session,
-                                                user_can_moderate:,
-                                                plain_messages: value_to_boolean(params[:plain_messages]),
-                                                exclude_assignment_description: value_to_boolean(params[:exclude_assignment_descriptions]),
-                                                include_all_dates: include_params.include?("all_dates"),
-                                                include_sections: include_params.include?("sections"),
-                                                include_sections_user_count: include_params.include?("sections_user_count"),
-                                                include_overrides: include_params.include?("overrides"),
-                                                master_course_status: mc_status,
-                                                root_topic_fields:)
+
+        # Skip the expensive per-topic serialization on conditional GETs: today
+        # even a 304 pays the full cost, because Rack etags the rendered body.
+        # The signature (see helper) over-includes -- a missed 304 is cheap, a
+        # stale body is not -- and is nil when freshness can't be proven.
+        cache_signature = discussion_topics_index_cache_signature
+        if cache_signature.nil? || stale?(etag: [cache_signature, mc_status], template: false)
+          render json: discussion_topics_api_json(@topics,
+                                                  @context,
+                                                  @current_user,
+                                                  session,
+                                                  user_can_moderate:,
+                                                  plain_messages: value_to_boolean(params[:plain_messages]),
+                                                  exclude_assignment_description: value_to_boolean(params[:exclude_assignment_descriptions]),
+                                                  include_all_dates: include_params.include?("all_dates"),
+                                                  include_sections: include_params.include?("sections"),
+                                                  include_sections_user_count: include_params.include?("sections_user_count"),
+                                                  include_overrides: include_params.include?("overrides"),
+                                                  master_course_status: mc_status,
+                                                  root_topic_fields:)
+        end
       end
     end
   end
@@ -1341,6 +1349,62 @@ class DiscussionTopicsController < ApplicationController
   def user_can_moderate
     @user_can_moderate = @context.grants_right?(@current_user, session, :moderate_forum) if @user_can_moderate.nil?
     @user_can_moderate
+  end
+
+  # Cheap etag for the JSON index so a conditional GET can 304 without the
+  # expensive per-topic serialization. Over-includes every input that shapes the
+  # body: an extra input only costs a needless recompute, a missing one serves a
+  # stale read/unread state.
+  #
+  # Returns nil (= always render fresh) when freshness can't be cheaply proven:
+  # anonymous; a pending timed-visibility transition (a future delayed_post_at /
+  # unlock_at / lock_at adds or removes a topic with no data write); or the
+  # module-lock / locked-unlocked variants (per-user, progression-based).
+  def discussion_topics_index_cache_signature
+    return nil unless @current_user
+
+    # Module-lock / locked_for? variants depend on per-user progression + time,
+    # which the data signature can't capture -- render fresh.
+    return nil if value_to_boolean(params[:exclude_context_module_locked_topics])
+    return nil if (params[:scope].to_s.split(",").map(&:strip) & %w[locked unlocked]).any?
+
+    now = Time.now.utc
+    # base class covers announcements too (STI), so this catches both kinds
+    pending_timed_visibility = DiscussionTopic.where(context: @context)
+                                              .where.not(workflow_state: "deleted")
+                                              .where("delayed_post_at > :now OR unlock_at > :now OR lock_at > :now", now:)
+                                              .exists?
+    return nil if pending_timed_visibility
+
+    topic_ids = @topics.map(&:id)
+    assignment_ids = @topics.filter_map(&:assignment_id)
+
+    # enrollment (Course) / group membership (Group) -> per-topic permissions
+    membership_version =
+      if @context.respond_to?(:enrollments)
+        @context.enrollments.where(user_id: @current_user).maximum(:updated_at)
+      elsif @context.respond_to?(:group_memberships)
+        @context.group_memberships.where(user_id: @current_user).maximum(:updated_at)
+      end
+
+    [
+      "discussion_topics#index/v1",
+      @current_user.id,
+      topic_ids,
+      @topics.map { |t| t.updated_at.to_f },
+      user_can_moderate,
+      Array(params[:include]).sort,
+      params.values_at(:only_announcements, :plain_messages, :exclude_assignment_descriptions,
+                       :order_by, :filter_by, :scope, :search_term, :per_page, :page),
+      # per-user read / subscription state
+      (topic_ids.any? ? DiscussionTopicParticipant.where(user_id: @current_user, discussion_topic_id: topic_ids).maximum(:updated_at)&.to_f : nil),
+      # replies drive unread_count without touching the topic row
+      (topic_ids.any? ? DiscussionEntry.where(discussion_topic_id: topic_ids).maximum(:updated_at)&.to_f : nil),
+      membership_version&.to_f,
+      # graded topics embed assignment_json (dates + overrides)
+      (assignment_ids.any? ? Assignment.where(id: assignment_ids).maximum(:updated_at)&.to_f : nil),
+      (assignment_ids.any? ? AssignmentOverride.where(assignment_id: assignment_ids).maximum(:updated_at)&.to_f : nil),
+    ]
   end
 
   API_ALLOWED_TOPIC_FIELDS = %w[title
