@@ -1,0 +1,13 @@
+{
+  "name": "canvas-compressor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node compress.mjs",
+    "dry-run": "DRY_RUN=1 node compress.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}
