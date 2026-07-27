@@ -63,7 +63,7 @@ services:
       --maxmemory-policy allkeys-lru
       --tcp-keepalive 30
       --maxclients 2000
-      --timeout 300
+      --timeout 0
       --save ""
     networks:
       - canvas-lms-network
