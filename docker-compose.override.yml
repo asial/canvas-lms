@@ -5,9 +5,9 @@ services:
     build:
       context: .
     volumes:
-      - .:/usr/src/app
-      - ./nginx/conf.d:/usr/src/nginx/conf.d
-      - ./nginx/server.d:/usr/src/nginx/server.d
+      - .:/usr/src/app:ro
+      - ./nginx/conf.d:/usr/src/nginx/conf.d:ro
+      - ./nginx/server.d:/usr/src/nginx/server.d:ro
       - api_docs:/usr/src/app/public/doc/api
       - brandable_css_brands:/usr/src/app/app/stylesheets/brandable_css_brands
       - bundler:/home/docker/.bundle/
