@@ -84,6 +84,10 @@ module AttachmentFu # :nodoc:
         if respond_to?(:root_attachment) && root_attachment&.filename
           filename = root_attachment.filename
         else
+          # Browsers sometimes submit a filename that is not valid UTF-8 (a Shift_JIS or
+          # Latin-1 name passed through unconverted). The regexp match below raises
+          # ArgumentError on those, which surfaces to the user as a failed upload.
+          filename = filename&.scrub("_")
           filename = Attachment.truncate_filename(filename, 255)
           filename&.gsub!(%r{/| }, "_")
         end
